@@ -1,13 +1,63 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-
 import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-def plot_results(results, mode="noniso_SN"):
+def parse_sheetname(sheetnames):
+    def extract(sheet):
+        ts = re.search(r"Ts(\d+)", sheet)
+        tiso = re.search(r"Tiso(\d+)", sheet)
+        c = re.search(r"C(\d+)", sheet)
+        return {
+            "Ts": int(ts.group(1)) if ts else None,
+            "Tiso": int(tiso.group(1)) if tiso else None,
+            "C": int(c.group(1)) if c else None,
+        }
+
+    parsed = {s: extract(s) for s in sheetnames}
+
+    # Determine varying keys
+    varying_keys = []
+    for key in ["Ts", "Tiso", "C"]:
+        values = {v[key] for v in parsed.values() if v[key] is not None}
+        if len(values) > 1:
+            varying_keys.append(key)
+
+    # Determine mode
+    # Priority: C → noniso_CR, Ts → noniso_SN, Tiso → iso
+    mode = None
+    for sheet_vals in parsed.values():
+        if sheet_vals["C"] is not None:
+            mode = "noniso"
+            break
+        elif sheet_vals["Tiso"] is not None:
+            mode = "iso"
+            break
+
+    key_to_title = {
+        "Ts": (r"$T_{\mathrm{s}}$ (°C)", "°C"),
+        "Tiso": (r"$T_{\mathrm{iso}}$ (°C)", "°C"),
+        "C": ("Cooling rate (°C/min)", "°C/min"),
+    }
+
+    # Build labels
+    labels = {}
+    if varying_keys:
+        for sheet, vals in parsed.items():
+            parts = []
+            for key in ["Ts", "Tiso", "C"]:
+                if key in varying_keys and vals[key] is not None:
+                    _, unit = key_to_title[key]
+                    parts.append(f"{vals[key]} {unit}")
+            labels[sheet] = ", ".join(parts)
+        title = key_to_title[varying_keys[0]][0] if len(varying_keys) == 1 else "Parameters"
+    else:
+        labels = {s: s for s in sheetnames}  # fallback: just sheetnames
+        title = None  # means "no legend"
+
+    return varying_keys, labels, title, mode
+
+def plot_results(results):
     n_sheets = len(results)
     colors = plt.cm.viridis(np.linspace(0, 1, n_sheets)) 
     
@@ -15,58 +65,58 @@ def plot_results(results, mode="noniso_SN"):
     ax1, ax2 = axes
 
     # Legend helpers
-    temp_legend = {}
     style_legend = [
         Line2D([0], [0], color='black', linestyle='-', label='Model'),
         Line2D([0], [0], color='black', linestyle='--', label='Experimental')
     ]
 
-    # Decide how to parse labels
-    if mode == "noniso_SN":
-        regex, title, unit = r"Ts(\d+)", r"$T_{\mathrm{s}}$ (°C)", "°C"
-    elif mode == "noniso_CR":
-        regex, title, unit = r"C(\d+)", r"Cooling rate (°C/min)", "°C/min"
-    elif mode == "iso":
-        regex, title, unit = r"Tiso(\d+)", r"$T_{\mathrm{iso}}$ (°C)", "°C"
-    else:
-        raise ValueError("mode must be one of {'noniso_SN', 'noniso_CR', 'iso'}")
+    sheetnames = [r['sheet'] for r in results]
+    varying_keys, labels, title, mode = parse_sheetname(sheetnames)
+
+    temp_legend = {}
 
     for i, r in enumerate(results):
         color = colors[i]
+        label_val = labels[r['sheet']]  # smart label
 
-        # Try to extract numeric value from sheet name
-        match = re.search(regex, r['sheet'])
-        if match:
-            label_val = int(match.group(1))
-        else:
-            label_val = r['sheet']  # fallback: raw name
+        if mode == 'iso':
+            x_data = r['t_exp']
+        elif mode == 'noniso':
+            x_data = r['T_exp']-273.15
 
         # Heat Flow
-        ax1.plot(r['T_exp']-273.15, r['HF_model'], label=f"{r['sheet']} model", color=color)
-        ax1.plot(r['T_exp']-273.15, r['HF_exp'], '--', label=f"{r['sheet']} exp", color=color)
+        ax1.plot(x_data, r['HF_model'], label=f"{label_val} model", color=color)
+        ax1.plot(x_data, r['HF_exp'], '--', label=f"{label_val} exp", color=color)
 
         # Crystallinity
-        ax2.plot(r['T_exp']-273.15, r['alpha_model'], label=f"{r['sheet']} model", color=color)
-        ax2.plot(r['T_exp']-273.15, r['alpha_exp'], '--', label=f"{r['sheet']} exp", color=color)
+        ax2.plot(x_data, r['alpha_model'], label=f"{label_val} model", color=color)
+        ax2.plot(x_data, r['alpha_exp'], '--', label=f"{label_val} exp", color=color)
 
         if label_val not in temp_legend:
-            temp_legend[label_val] = Line2D([0], [0], color=color, label=f"{label_val}")
+            temp_legend[label_val] = Line2D([0], [0], color=color, label=label_val)
 
     # Formatting Heat Flow
     ax1.set_ylabel('Heat Flow (W/g)')
-    ax1.set_xlim(10, 200)
     legend1 = ax1.legend(handles=style_legend, loc="lower right", frameon=False)
-    legend2 = ax1.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
     ax1.add_artist(legend1)
+    if title is not None:  # only add if varying parameter found
+        legend2 = ax1.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
+        ax1.add_artist(legend2)
     ax1.grid(False)
 
     # Formatting Crystallinity
-    ax2.set_xlabel('Temperature (°C)')
+    if mode == 'iso':
+        ax2.set_xlabel('Step time (s)')
+        ax2.set_xlim(0,3600)
+    if mode == 'noniso':
+        ax2.set_xlabel('Temperature (°C)')
+        ax2.set_xlim(50, 150)
     ax2.set_ylabel('Crystallinity (-)')
-    ax2.set_xlim(10, 200)
     legend1 = ax2.legend(handles=style_legend, loc="lower right", frameon=False)
-    legend2 = ax2.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
     ax2.add_artist(legend1)
+    if title is not None:
+        legend2 = ax2.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
+        ax2.add_artist(legend2)
     ax2.grid(False)
 
     plt.tight_layout()

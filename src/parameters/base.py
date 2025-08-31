@@ -28,10 +28,15 @@ def G_LH(T, params):
     delta_T = Tm0 - T
     f = 2 * T / (Tm0 + T)
     
-    exp1 = np.exp(np.clip(-U / (R * (T - T_infty)), -700, 700))
-    exp2 = np.exp(np.clip(-Kg / (T * delta_T * f), -700, 700))
+    exp1 = np.exp(np.clip(-U / (R * (T - T_infty)), -100, 100))
+    exp2 = np.exp(np.clip(-Kg / (T * delta_T * f), -100, 100))
     
-    return G0 * exp1 * exp2 
+    G = G0 * exp1 * exp2
+
+    # Set G = 0 outside allowed temperature range
+    G = np.where((T < -20 + 273.15) | (T > 170 + 273.15), 0.0, G)
+    
+    return G
 
 def q_HC(T, params): 
     q0 = params.adaptable_params['q0']

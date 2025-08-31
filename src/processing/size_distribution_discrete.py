@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 import re
-
-import numpy as np
+from .plotting import parse_sheetname
 
 def evolve_spherulites(dimensions, t, alpha, G, F, Na):
     N = len(t)
@@ -54,19 +53,12 @@ def evolve_spherulites(dimensions, t, alpha, G, F, Na):
 
     return rho, dn_kl
 
-def plot_spherulites(dimensions, results, mode, i = -1, bins=100):
+def plot_spherulites(dimensions, results, i=-1, bins=100):
     n_results = len(results)
     colors = plt.cm.viridis(np.linspace(0, 1, n_results))  # automatic colors
-    
-    # Decide how to parse labels
-    if mode == "noniso_SN":
-        regex, title = r"Ts(\d+)", r"$T_{\mathrm{s}}$ (°C)"
-    elif mode == "noniso_CR":
-        regex, title = r"C(\d+)", r"Cooling rate (°C/min)"
-    elif mode == "iso":
-        regex, title = r"Tiso(\d+)", r"$T_{\mathrm{iso}}$ (°C)"
-    else:
-        raise ValueError("mode must be one of {'noniso_SN', 'noniso_CR', 'iso'}")
+
+    sheetnames = [r['sheet'] for r in results]
+    varying_keys, labels, title, mode = parse_sheetname(sheetnames)
 
     plt.figure(figsize=(8, 6))
 
@@ -75,10 +67,9 @@ def plot_spherulites(dimensions, results, mode, i = -1, bins=100):
 
     for x, r in enumerate(results):
         color = colors[x]
-        
-        # ===== Extract numeric label =====
-        match = re.search(regex, r['sheet'])
-        label_val = int(match.group(1)) if match else r['sheet']
+
+        # ===== Label from parse_sheetname =====
+        label_val = labels[r['sheet']]
 
         rho = r["rho"]
         dn_kl = r["dn_kl"]
@@ -95,9 +86,11 @@ def plot_spherulites(dimensions, results, mode, i = -1, bins=100):
 
         # plot
         centers = 0.5 * (edges[1:] + edges[:-1]) * 1e6  # in µm
-        plt.bar(centers, hist, width=np.diff(edges) * 1e6, 
-                align="center", color=color, alpha=0.5)
-        
+        plt.bar(
+            centers, hist, width=np.diff(edges) * 1e6, 
+            align="center", color=color, alpha=0.5
+        )
+
         # Legend entry
         if label_val not in temp_legend:
             temp_legend[label_val] = Line2D([0], [0], color=color, label=f"{label_val}")
@@ -105,10 +98,15 @@ def plot_spherulites(dimensions, results, mode, i = -1, bins=100):
     plt.xlabel("Radius (µm)")
     plt.ylabel("Number of spherulites")
 
+    # Always show style legend
     legend1 = plt.legend(handles=style_legend, loc="upper left", frameon=False)
-    legend2 = plt.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
     plt.gca().add_artist(legend1)
-    plt.grid(False)
 
+    # Only add parameter legend if there are varying parameters
+    if title is not None:
+        legend2 = plt.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
+        plt.gca().add_artist(legend2)
+
+    plt.grid(False)
     plt.tight_layout()
     plt.show()

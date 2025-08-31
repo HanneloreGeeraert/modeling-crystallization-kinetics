@@ -1,27 +1,25 @@
 import numpy as np
 from src.models.kinetics import run_model
-from src.models.utils import get_deltaHm, load_sheets
+from src.models.utils import get_deltaHm
 from src.processing.plotting import plot_results
 from src.processing.size_distribution_discrete import plot_spherulites, evolve_spherulites
 from src.processing.data import get_dataset
-from src.models.specs import noniso_DII_2D_spec, noniso_DII_3D_spec, noniso_DII_2D_sc_spec, noniso_DII_3D_sc_spec
+from src.models.specs import get_modelspec
 
 # Load experimental data 
-[all_sheets, sheet_names] = get_dataset("non_iso_DII")
+[all_sheets, sheet_names] = get_dataset("iso_DII")
 
 results = []
 
 # Select model and parameters 
-model_spec = noniso_DII_3D_spec
+model_spec = get_modelspec("DII_3D_spec")
 
 for i, sheet_name in enumerate(sheet_names):
     
-    if model_spec.mode == "noniso_SN":    
-        # Extract Ts from sheet name
-        Ts = float(sheet_name.split("Ts")[1].split("_")[0]) + 273.15
-        model_spec.params.fixed_params['Ts'] = Ts
-        if Ts == 176 + 273.15:
-            model_spec.params.adaptable_params['Tsref'] = 105 + 273.15 
+    Ts = float(sheet_name.split("Ts")[1].split("_")[0]) + 273.15
+    model_spec.params.fixed_params['Ts'] = Ts
+    if Ts == 176 + 273.15 and 'Tsref' in model_spec.params.adaptable_params:
+        model_spec.params.adaptable_params['Tsref'] = 105 + 273.15
 
     df = all_sheets[sheet_name]
     t_exp = df['StepTime_sec'].values
@@ -73,5 +71,5 @@ for i, sheet_name in enumerate(sheet_names):
 print("Done processing all sheets.")
 
 # Plot results
-plot_results(results, mode = model_spec.mode)
-plot_spherulites(model_spec.dimensions, results, mode = model_spec.mode, i = -1)
+plot_results(results)
+plot_spherulites(model_spec.dimensions, results, i = -1)
