@@ -1,6 +1,6 @@
 import numpy as np
 from .base import ModelParams
-from .base import G_LH, q_HC, N0_logistic, dN0dT_logistic, alpha_max_test
+from .base import G_LH, q_HC, N0_logistic, dN0dT_logistic, alpha_max_test, N0_fixed, dN0dT_fixed
 
 # Fixed parameters (never optimized)
 fixed_params = dict(
@@ -41,23 +41,33 @@ adaptable_DII_3D = dict(
     G0=28.05607404,
     Kg=327350.6189,
     T0=150+273.15, 
-    q0=1 / (2*100e-6) ,  # Adjusted for 3D model through sample thickness
+    q0= 1 / (2*100e-6), # Adjusted for 3D model through sample thickness
     q1=0,
-    Tsref=110+273.15,
+    Tsref=105+273.15,
     k_N=0.5,
     Nmax_a = -0.165920,
     Nmax_b = 82.4701 - np.log10(2*100e-6)  # Adjusted for 3D model through sample thickness
+)
+
+adaptable_DII_3D_new = dict(
+    T_infty=267.85-30,
+    Tm0=454.65,
+    G0=28.05607404,
+    Kg=327350.6189,
+    T0=150+273.15, 
+    q0= 10e8, 
+    q1=0
 )
 
 DII_3D = ModelParams(
     functions={
         "q": q_HC,
         "G": G_LH,
-        "N0": N0_logistic,
-        "dN0dT": dN0dT_logistic
+        "N0": N0_fixed,
+        "dN0dT": dN0dT_fixed
     },
     fixed_params=fixed_params.copy(),
-    adaptable_params=adaptable_DII_3D
+    adaptable_params=adaptable_DII_3D_new
 )
 
 # Adaptable parameters (can be optimized)
@@ -103,14 +113,25 @@ adaptable_DII_3D_sc = dict(
     k_s = 0.5
 )
 
+adaptable_DII_3D_sc_new = dict(
+    T_infty=267.85-30,
+    Tm0=454.65,
+    G0=28.05607404,
+    Kg=327350.6189,
+    T0=150+273.15, 
+    q0=10e8 ,  # Adjusted for 3D model through sample thickness
+    q1=0,
+    k_s = 0.005
+)
+
 DII_3D_sc = ModelParams(
     functions={
         "q": q_HC,
         "G": G_LH,
-        "N0": N0_logistic,
-        "dN0dT": dN0dT_logistic,
+        "N0": N0_fixed,
+        "dN0dT": dN0dT_fixed,
         "alpha_max": alpha_max_test
     },
     fixed_params=fixed_params.copy(),
-    adaptable_params=adaptable_DII_3D_sc
+    adaptable_params=adaptable_DII_3D_sc_new
 )

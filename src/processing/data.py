@@ -1,12 +1,10 @@
 import os
 import pandas as pd
 
-import pandas as pd
-
 def load_sheets(file_path, sheet_names):
     cols_needed = [
         'StepTime_sec', 'Temperature', 'Weight', 'HF_Corrected',
-        'HF_Corrected_x_W', 'DT', 'alpha', 'alpha_x_weight', 'Int'
+        'HF_Corrected_x_W', 'DT', 'alpha_x_weight', 'Int', 'Weight'
     ]
 
     # Read all sheets
@@ -27,11 +25,11 @@ BASE_FOLDER = r"C:\Users\hgeeraer\OneDrive - Vrije Universiteit Brussel\Bestande
 DATASETS = {
     "non_iso_DII": {
         "file": "Self-nucleation P(3HB-co 5% 4HB) non-iso C10 (rep 1).xlsx",
-        "sheets": ["Ts164_C10", "Ts168_C10", "Ts172_C10", "Ts176_C10"]
+        "sheets": ["Ts172_C10"] #["Ts164_C10", "Ts168_C10", "Ts172_C10", "Ts176_C10"]
     },
     "iso_DII": {
         "file": "Self-nucleation P(3HB-co-5% 4HB) 176x3 - with cooling.xlsx",
-        "sheets": ["Ts176_Tiso105"]#, "Ts176_Tiso105", "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
+        "sheets": ["Ts176_Tiso100","Ts176_Tiso110"] #, "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
     }
 }
 

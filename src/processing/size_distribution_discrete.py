@@ -9,13 +9,13 @@ def evolve_spherulites(dimensions, t, alpha, G, F, Na):
     
     # Arrays for storing variables
     rho = np.zeros((N, N))       # If 2D: squared radii [time, nucleus_time], if 3D: cubed radii
-    # n_kl = np.zeros((N, N))     # cumulative number with radius <= rho_kl
     dn_kl = np.zeros((N, N))    # number of spherulites in interval
 
     alpha_safe = np.clip(alpha, 0.0, 1.0)
 
     # --- main loop ---
     for j in range(N-1):   # nucleation index τ_l
+
         # store growth parameters for this nucleus j
         denom = max(1.0 - alpha_safe[j], 1e-12)
         a = dimensions / denom
@@ -46,8 +46,7 @@ def evolve_spherulites(dimensions, t, alpha, G, F, Na):
                 
                 rho[i+1, j] = rho[i, j] + a * Z_k - b * Y_k + c * X_k
 
-            # --- number distributions ---
-            #n_kl[i+1, j] = Na[i+1] - Na[j]     # total up to radius ρ_kl
+            # --- number distributions --- 
             if j <= i-1:
                 dn_kl[i+1, j] = max(Na[j+1] - Na[j], 0.0)
 

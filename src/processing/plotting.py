@@ -79,18 +79,24 @@ def plot_results(results):
         color = colors[i]
         label_val = labels[r['sheet']]  # smart label
 
+        # Build mask
+        mask = (r['weight'] == 1)
+
         if mode == 'iso':
-            x_data = r['t_exp']
+            x_data_exp = r['t_exp'][mask]
+            x_data_mod = r['t_exp']
         elif mode == 'noniso':
-            x_data = r['T_exp']-273.15
+            x_data_exp = r['T_exp'][mask] - 273.15
+            x_data_mod = r['T_exp'] - 273.15
 
         # Heat Flow
-        ax1.plot(x_data, r['HF_model'], label=f"{label_val} model", color=color)
-        ax1.plot(x_data, r['HF_exp'], '--', label=f"{label_val} exp", color=color)
+        ax1.plot(x_data_mod, r['HF_model'], label=f"{label_val} model", color=color)
+        ax1.plot(x_data_exp, r['HF_exp'][mask], '--', label=f"{label_val} exp", color=color)
 
         # Crystallinity
-        ax2.plot(x_data, r['alpha_model'], label=f"{label_val} model", color=color)
-        ax2.plot(x_data, r['alpha_exp'], '--', label=f"{label_val} exp", color=color)
+        ax2.plot(x_data_mod, r['alpha_model'], label=f"{label_val} model", color=color)
+        ax2.plot(x_data_exp, r['alpha_exp'][mask], '--', label=f"{label_val} exp", color=color)
+
 
         if label_val not in temp_legend:
             temp_legend[label_val] = Line2D([0], [0], color=color, label=label_val)

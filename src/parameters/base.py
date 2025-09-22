@@ -57,11 +57,14 @@ def Nmax_exponential(params):
         log10Nmax = Nmax_b + Ts_DIIa * Nmax_a
     return 10**log10Nmax
 
+def Nmax_fixed():
+    return 8e10
+
 def N0_logistic(T, params):
     # Extract from params
     k_N = params.adaptable_params['k_N']
     Tsref = params.adaptable_params['Tsref']
-    Nmax = Nmax_exponential(params)
+    Nmax = Nmax_fixed()
     
     # Compute N0
     x = np.clip(k_N * (T - Tsref), -700, 700)
@@ -69,8 +72,14 @@ def N0_logistic(T, params):
 
 def dN0dT_logistic(N0, params):
     k_N = params.adaptable_params['k_N']
-    Nmax = Nmax_exponential(params)
+    Nmax = Nmax_fixed()
     return -k_N * N0 * (1 - N0 / Nmax)
+
+def N0_fixed(T, params):
+    return 0
+
+def dN0dT_fixed(N0, params):
+    return 0
 
 def alpha_max_test(T, params):
     eps = 1e-10
@@ -82,4 +91,4 @@ def alpha_max_test(T, params):
         c = -2.714187e1
         alpha_max = poly_val = a * T**2 + b * T + c
 
-    return np.clip(alpha_max, 0.6, 1-eps)  # Safe lower bound
+    return 0.8 #np.clip(alpha_max, 0.6, 1-eps)  # Safe lower bound

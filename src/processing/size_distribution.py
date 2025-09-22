@@ -131,7 +131,6 @@ def plot_spherulites(results, mode, nbins=150, idx=None):
     # ===== Formatting: Mean radius =====
     ax_mean.set_xlabel("Temperature (°C)")
     ax_mean.set_ylabel("Mean radius (μm)")
-    ax_mean.set_xlim(10, 150)
     legend1 = ax_mean.legend(handles=style_legend, loc="lower right", frameon=False)
     legend2 = ax_mean.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
     ax_mean.add_artist(legend1)

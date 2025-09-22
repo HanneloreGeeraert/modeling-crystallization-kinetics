@@ -21,14 +21,6 @@ def get_modelspec(name: str) -> ModelSpec:
         raise ValueError(f"Model '{name}' not found. Available: {available}")
     
 # Define the ready-to-use models
-noniso_DII_2D_spec = ModelSpec(
-    dimensions=2,
-    func=haudin_chenot_2D,
-    params=DII_2D,
-    n_states=6,
-    state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P"]
-)
-
 DII_3D_spec = ModelSpec(
     dimensions=3,
     func=haudin_chenot_3D,
@@ -37,7 +29,15 @@ DII_3D_spec = ModelSpec(
     state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]
 )
 
-noniso_DII_2D_sc_spec = ModelSpec(
+DII_2D_spec = ModelSpec(
+    dimensions=2,
+    func=haudin_chenot_2D,
+    params=DII_2D,
+    n_states=6,
+    state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P"]
+)
+
+DII_2D_sc_spec = ModelSpec(
     dimensions=2,
     func=haudin_chenot_2D_sc,
     params=DII_2D_sc,
@@ -45,7 +45,7 @@ noniso_DII_2D_sc_spec = ModelSpec(
     state_names=["N", "alpha", "alphas", "Na", "Ntilde_a", "F", "P"]
 )
 
-noniso_DII_3D_sc_spec = ModelSpec(
+DII_3D_sc_spec = ModelSpec(
     dimensions=3,
     func=haudin_chenot_3D_sc,
     params=DII_3D_sc,
