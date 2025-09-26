@@ -23,13 +23,17 @@ BASE_FOLDER = r"C:\Users\hgeeraer\OneDrive - Vrije Universiteit Brussel\Bestande
 
 # Dictionary of available datasets
 DATASETS = {
-    "non_iso_DII": {
+    "noniso_DII": {
         "file": "Self-nucleation P(3HB-co 5% 4HB) non-iso C10 (rep 1).xlsx",
-        "sheets": ["Ts172_C10"] #["Ts164_C10", "Ts168_C10", "Ts172_C10", "Ts176_C10"]
+        "sheets": ["Ts176_C10"] #["Ts164_C10", "Ts168_C10", "Ts172_C10", "Ts176_C10"]
     },
     "iso_DII": {
-        "file": "Self-nucleation P(3HB-co-5% 4HB) 176x3 - with cooling.xlsx",
-        "sheets": ["Ts176_Tiso100","Ts176_Tiso110"] #, "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
+        "file": "Self-nucleation P(3HB-co-5% 4HB) 176x3 iso with cooling.xlsx",
+        "sheets": ["Ts176_Tiso115"] #, "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
+    },
+    "noniso_CR": {
+        "file": "Self-nucleation P(3HB-co 5% 4HB) 176x3 non-iso.xlsx",
+        "sheets": ["Ts176_C20"] #, "Ts176_C2", "Ts176_C5", "Ts176_C10", "Ts176_C20", "Ts176_C30", "Ts176_C100"]
     }
 }
 

@@ -25,8 +25,8 @@ DII_3D_spec = ModelSpec(
     dimensions=3,
     func=haudin_chenot_3D,
     params=DII_3D,
-    n_states=7,
-    state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]
+    n_states=8,
+    state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P", "Q", "S"]
 )
 
 DII_2D_spec = ModelSpec(

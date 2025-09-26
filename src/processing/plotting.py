@@ -101,6 +101,39 @@ def plot_results(results):
         if label_val not in temp_legend:
             temp_legend[label_val] = Line2D([0], [0], color=color, label=label_val)
 
+        # === Find 50% crystallinity point for model ===
+        alpha = r['alpha_model']
+        xdata = x_data_mod
+        idx = np.where(np.diff(np.sign(alpha - 0.5)) != 0)[0]
+        if len(idx) > 0:
+            i0 = idx[0]
+            x0, x1 = xdata[i0], xdata[i0+1]
+            y0, y1 = alpha[i0], alpha[i0+1]
+            x_half = x0 + (0.5 - y0) * (x1 - x0) / (y1 - y0)
+            ax2.scatter(x_half, 0.5, color=color, edgecolor='black', zorder=5)
+            if mode == 'iso':
+                label = f"{x_half:.1f} s"
+            elif mode == 'noniso':
+                label = f"{x_half:.1f} °C"
+            ax2.annotate(label, (x_half, 0.5), xytext=(10,0),
+                         textcoords="offset points", fontsize=12, color=color)
+
+        # === Find 50% crystallinity point for experimental data ===
+        alpha_exp = r['alpha_exp'][mask]
+        xdata_exp2 = x_data_exp  # already masked
+        idx_exp = np.where(np.diff(np.sign(alpha_exp - 0.5)) != 0)[0]
+        if len(idx_exp) > 0:
+            i0 = idx_exp[0]
+            x0, x1 = xdata_exp2[i0], xdata_exp2[i0+1]
+            y0, y1 = alpha_exp[i0], alpha_exp[i0+1]
+            x_half_exp = x0 + (0.5 - y0) * (x1 - x0) / (y1 - y0)
+            ax2.scatter(x_half_exp, 0.5, color=color, marker='x', zorder=6)  # different marker to distinguish
+            if mode == 'iso':
+                label_exp = f"{x_half_exp:.1f} s"
+            elif mode == 'noniso':
+                label_exp = f"{x_half_exp:.1f} °C"
+            ax2.annotate(label_exp, (x_half_exp, 0.5), xytext=(-60, 0),
+                         textcoords="offset points", fontsize=12, color=color)
     # Formatting Heat Flow
     ax1.set_ylabel('Heat Flow (W/g)')
     legend1 = ax1.legend(handles=style_legend, loc="lower right", frameon=False)

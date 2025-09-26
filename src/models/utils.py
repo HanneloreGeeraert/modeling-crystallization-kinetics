@@ -1,4 +1,4 @@
 # Heat of fusion normalization factor
 def get_deltaHm(Int): 
-    return -52
+    return -Int.iloc[0]
 

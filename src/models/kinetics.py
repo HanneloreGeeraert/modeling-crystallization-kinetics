@@ -23,6 +23,55 @@ def run_model(model_func, y0, t_exp, T_exp, DT_exp, params):
 
     return T_func, sol
 
+# Model that will be used:
+def k_act_empirical(T, params): 
+    k0 = params.adaptable_params['k0']
+    k1 = params.adaptable_params['k1']
+    T0 = params.adaptable_params['T0']
+    return k0 * np.exp(-k1 * (T - T0))
+
+def activation_from_S(S, params): # logistic switch (numerically robust sharp switch)
+    S_c = params.adaptable_params["S_c"]       # threshold
+    delta = 0.02 * S_c           # steepness; smaller -> sharper
+    N0 = params.fixed_params["N0"]
+    a = N0 / (1.0 + np.exp(-(S - S_c) / delta))
+    return a
+
+def haudin_chenot_3D(t, y, T_func, DT_func, params):
+    N, alpha, Na, Ntilde_a, F, P, Q, S = y
+
+    T = T_func(t)
+    DT = DT_func(t)
+    
+    # Call model functions from params
+    G  = params.functions["G"](T, params)
+    N0 = params.functions["N0"](T, params)
+    dN0dT = params.functions["dN0dT"](N0, params)
+
+    eps = 1e-10
+    one_minus_alpha = max(1 - alpha, eps)
+
+    # compute k_act from current T 
+    k_act = k_act_empirical(T, params)   
+
+    # update S: cumulative activation variable
+    dS_dt = k_act
+
+    # compute activation fraction a from S
+    a = activation_from_S(S, params)
+
+    # ODE system
+    dNa_dt = a * N
+    dNtilde_a_dt = a * N / one_minus_alpha
+    dF_dt = G
+    dP_dt = F * dNtilde_a_dt
+    dQ_dt = F**2 * a * N / one_minus_alpha
+    dalpha_dt = 4 * np.pi * one_minus_alpha * G * (F**2 * Ntilde_a - 2 * F * P + Q)
+    dN_dt = - N * (a + (1 / one_minus_alpha) * dalpha_dt) + one_minus_alpha * dN0dT * DT
+
+    return [dN_dt, dalpha_dt, dNa_dt, dNtilde_a_dt, dF_dt, dP_dt, dQ_dt, dS_dt]
+
+# Other models only here as back-up:
 def haudin_chenot_2D(t, y, T_func, DT_func, params):
     N, alpha, Na, Ntilde_a, F, P = y
     
@@ -47,32 +96,6 @@ def haudin_chenot_2D(t, y, T_func, DT_func, params):
     dN_dt = - N * (q + (1 / one_minus_alpha) * dalpha_dt) + one_minus_alpha * dN0dT * DT
 
     return [dN_dt, dalpha_dt, dNa_dt, dNtilde_a_dt, dF_dt, dP_dt]
-
-def haudin_chenot_3D(t, y, T_func, DT_func, params):
-    N, alpha, Na, Ntilde_a, F, P, Q = y
-    
-    T = T_func(t)
-    DT = DT_func(t)
-    
-    # Call model functions from params
-    q  = params.functions["q"](T, params)
-    G  = params.functions["G"](T, params)
-    N0 = params.functions["N0"](T, params)
-    dN0dT = params.functions["dN0dT"](N0, params)
-
-    eps = 1e-10
-    one_minus_alpha = max(1 - alpha, eps)
-    
-    # ODE system
-    dNa_dt = q * N
-    dNtilde_a_dt = q * N / one_minus_alpha
-    dF_dt = G
-    dP_dt = F * dNtilde_a_dt
-    dQ_dt = F**2 * q * N / one_minus_alpha
-    dalpha_dt = 4 * np.pi * one_minus_alpha * G * (F**2 * Ntilde_a - 2 * F * P + Q)
-    dN_dt = - N * (q + (1 / one_minus_alpha) * dalpha_dt) + one_minus_alpha * dN0dT * DT
-
-    return [dN_dt, dalpha_dt, dNa_dt, dNtilde_a_dt, dF_dt, dP_dt, dQ_dt]
 
 def haudin_chenot_2D_sc(t, y, T_func, DT_func, params):
     N, alpha, alphas, Na, Ntilde_a, F, P = y
