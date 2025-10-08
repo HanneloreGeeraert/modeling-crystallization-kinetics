@@ -38,12 +38,17 @@ def G_LH(T, params):
     
     return G
 
-def q_HC(T, params): 
-    q0 = params.adaptable_params['q0']
-    q1 = params.adaptable_params['q1']
+def q_1(T, params): 
+    q1_0 = params.adaptable_params['q1_0']
+    q1_1 = params.adaptable_params['q1_1']
     T0 = params.adaptable_params['T0']
+    return q1_0 * np.exp(-q1_1 * (T - T0))
 
-    return q0 * np.exp(-q1 * (T - T0))
+def q_2(T, params): 
+    q2_0 = params.adaptable_params['q2_0']
+    q2_1 = params.adaptable_params['q2_1']
+    T0 = params.adaptable_params['T0']
+    return q2_0 * np.exp(-q2_1 * (T - T0))
 
 def Nmax_exponential(params):
     Ts = params.fixed_params['Ts']

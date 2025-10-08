@@ -23,7 +23,42 @@ def run_model(model_func, y0, t_exp, T_exp, DT_exp, params):
 
     return T_func, sol
 
-# Model that will be used:
+# Model that will be used
+def haudin_chenot_3D(t, y, T_func, DT_func, params):
+    N, Ni, alpha, Na, Ntilde_a, F, P, Q = y
+
+    T = T_func(t)
+    DT = DT_func(t)
+
+    q1  = params.functions["q1"](T, params)
+    q2  = params.functions["q2"](T, params)
+    G   = params.functions["G"](T, params)
+    N0  = params.functions["N0"](T, params)
+    dN0dT = params.functions["dN0dT"](N0, params)
+
+    eps = 1e-10
+    one_minus_alpha = np.clip(1.0 - alpha, eps, 1.0)
+
+    # Growth and alpha
+    dF_dt = G
+    dNtilde_a_dt = 0.0
+    dP_dt = 0.0
+    dQ_dt = 0.0
+
+    # Activation and impingement
+    dNa_dt = q2 * Ni
+    dNtilde_a_dt = dNa_dt / one_minus_alpha
+    dP_dt = F * dNtilde_a_dt
+    dQ_dt = F**2 * dNa_dt / one_minus_alpha
+    dalpha_dt = 4.0 * np.pi * one_minus_alpha * G * (F**2 * Ntilde_a - 2.0 * F * P + Q)
+
+    # Two-step activation + impingement + thermal term
+    dN_dt  = -q1 * N - (N / one_minus_alpha) * dalpha_dt + (one_minus_alpha) * dN0dT * DT
+    dNi_dt =  q1 * N - q2 * Ni - (Ni / one_minus_alpha) * dalpha_dt
+
+    return [dN_dt, dNi_dt, dalpha_dt, dNa_dt, dNtilde_a_dt, dF_dt, dP_dt, dQ_dt]
+
+# Model with logical switch
 def k_act_empirical(T, params): 
     k0 = params.adaptable_params['k0']
     k1 = params.adaptable_params['k1']
@@ -37,7 +72,7 @@ def activation_from_S(S, params): # logistic switch (numerically robust sharp sw
     a = N0 / (1.0 + np.exp(-(S - S_c) / delta))
     return a
 
-def haudin_chenot_3D(t, y, T_func, DT_func, params):
+def haudin_chenot_3D_logical_switch(t, y, T_func, DT_func, params):
     N, alpha, Na, Ntilde_a, F, P, Q, S = y
 
     T = T_func(t)

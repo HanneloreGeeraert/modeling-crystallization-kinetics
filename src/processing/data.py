@@ -29,11 +29,11 @@ DATASETS = {
     },
     "iso_DII": {
         "file": "Self-nucleation P(3HB-co-5% 4HB) 176x3 iso with cooling.xlsx",
-        "sheets": ["Ts176_Tiso115"] #, "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
+        "sheets": ["Ts176_Tiso115","Ts176_Tiso120"] #["Ts176_Tiso100", "Ts176_Tiso105", "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
     },
     "noniso_CR": {
         "file": "Self-nucleation P(3HB-co 5% 4HB) 176x3 non-iso.xlsx",
-        "sheets": ["Ts176_C20"] #, "Ts176_C2", "Ts176_C5", "Ts176_C10", "Ts176_C20", "Ts176_C30", "Ts176_C100"]
+        "sheets": ["Ts176_C1", "Ts176_C2", "Ts176_C5", "Ts176_C10", "Ts176_C20", "Ts176_C30", "Ts176_C100"]
     }
 }
 

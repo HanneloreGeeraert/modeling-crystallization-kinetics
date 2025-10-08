@@ -3,11 +3,11 @@ from src.models.kinetics import run_model
 from src.models.utils import get_deltaHm
 from src.processing.plotting import plot_results
 from src.processing.size_distribution_lessmemory import evolve_spherulites, plot_spherulites_from_histograms
-from src.processing.data import get_dataset
+from src.processing.data_loadonce import get_dataset
 from src.models.specs import get_modelspec
 
 # Load experimental data 
-[all_sheets, sheet_names] = get_dataset("iso_DII")
+[all_sheets, sheet_names] = get_dataset("iso_DII", reload = False)
 
 results = []
 
@@ -29,9 +29,7 @@ for i, sheet_name in enumerate(sheet_names):
     deltaH_m = get_deltaHm(df['Int'])
 
     # Initial conditions for the model
-    N0 = 4e10
-    model_spec.params.fixed_params['N0'] = N0
-
+    N0 = model_spec.params.adaptable_params['N0']
     y0 = model_spec.make_y0(sheet_name, df)
     y0[0] = N0
 
@@ -67,7 +65,7 @@ for i, sheet_name in enumerate(sheet_names):
         'HF_model': HF_model,
         'alpha_exp': alpha_exp,
         'alpha_model': alpha_model,
-        'weight': weight #,
+        'weight': weight#,
         #'histograms': histograms
     })
 
