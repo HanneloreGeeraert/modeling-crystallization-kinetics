@@ -6,13 +6,13 @@ from src.processing.size_distribution_lessmemory import evolve_spherulites, plot
 from src.processing.data_loadonce import get_dataset
 from src.models.specs import get_modelspec
 
-# Load experimental data 
+# Load experimental data
 [all_sheets, sheet_names] = get_dataset("iso_DII", reload = False)
 
 results = []
 
 # Select model and parameters 
-model_spec = get_modelspec("DII_3D_spec")
+model_spec = get_modelspec("DII_3D")
 
 for i, sheet_name in enumerate(sheet_names):
     

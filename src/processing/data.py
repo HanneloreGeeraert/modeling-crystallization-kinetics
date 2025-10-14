@@ -19,7 +19,7 @@ def load_sheets(file_path, sheet_names):
     return all_sheets
 
 # Base folder for datasets
-BASE_FOLDER = r"C:\Users\hgeeraer\OneDrive - Vrije Universiteit Brussel\Bestanden PhD\Modeling\Haudin-Chenot"
+BASE_FOLDER = r"C:\Users\Hannelore\OneDrive - Vrije Universiteit Brussel\Bestanden PhD\Modeling\Haudin-Chenot"
 
 # Dictionary of available datasets
 DATASETS = {

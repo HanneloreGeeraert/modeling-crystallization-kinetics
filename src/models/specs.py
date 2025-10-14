@@ -1,4 +1,4 @@
-from .kinetics import haudin_chenot_2D, haudin_chenot_3D, haudin_chenot_2D_sc, haudin_chenot_3D_sc
+from .kinetics import haudin_chenot_3D, haudin_chenot_3D_twostep
 from ..parameters.domainII import DII_3D
 
 class ModelSpec:
@@ -21,10 +21,18 @@ def get_modelspec(name: str) -> ModelSpec:
         raise ValueError(f"Model '{name}' not found. Available: {available}")
     
 # Define the ready-to-use models
-DII_3D_spec = ModelSpec(
+DII_3D_twostep = ModelSpec(
     dimensions=3,
-    func=haudin_chenot_3D,
+    func=haudin_chenot_3D_twostep,
     params=DII_3D,
     n_states=8,
     state_names=["N", "Ni", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]
+)
+
+DII_3D = ModelSpec(
+    dimensions=3,
+    func=haudin_chenot_3D,
+    params=DII_3D,
+    n_states=7,
+    state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]
 )

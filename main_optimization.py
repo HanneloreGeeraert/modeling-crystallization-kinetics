@@ -17,10 +17,10 @@ all_sheets, sheet_names = get_dataset("iso_DII", reload=True)
 # ================================================================
 # 2️⃣ Select model and parameters
 # ================================================================
-model_spec = get_modelspec("DII_3D_spec")
+model_spec = get_modelspec("DII_3D")
 
 # Choose which parameters to optimize
-param_names = ["N0", "q1_0", "q2_0", "q1_1", "q2_1"]  
+param_names = ["N0", "q2_0", "q2_1"]  
 x0 = [model_spec.params.adaptable_params[name] for name in param_names]
 
 
@@ -29,7 +29,8 @@ x0 = [model_spec.params.adaptable_params[name] for name in param_names]
 # ================================================================
 def objective_function(param_values):
     """
-    Compute total squared error between experimental and model HF curves.
+    Compute total squared error between experimental and model HF curves,
+    but only for alpha_exp in [0.1, 0.5].
     """
     for name, value in zip(param_names, param_values):
         model_spec.params.adaptable_params[name] = value
@@ -45,6 +46,7 @@ def objective_function(param_values):
         T_exp = df['Temperature'].values + 273.15
         DT_exp = df['DT'].values / 60
         HF_exp = df['HF_Corrected_x_W'].values
+        alpha_exp = df['alpha_x_weight'].values
         deltaH_m = get_deltaHm(df['Int'])
 
         # Skip empty signals
@@ -53,7 +55,6 @@ def objective_function(param_values):
             continue
 
         N0 = model_spec.params.adaptable_params['N0']
-
         y0 = model_spec.make_y0(sheet_name, df)
         y0[0] = N0
 
@@ -72,16 +73,25 @@ def objective_function(param_values):
         else:
             HF_model = deltaH_m * dalpha_dt
 
-        # Safety: remove NaNs/Infs
+        # Safety checks
         if np.any(np.isnan(HF_model)) or np.any(np.isinf(HF_model)):
             print(f"⚠️ Invalid HF_model for {sheet_name}")
             return np.inf
 
-        # Safe normalization
+        # ✅ Restrict comparison to 0.1 <= alpha_exp <= 0.5
+        mask = (alpha_exp >= 0.1) & (alpha_exp <= 0.5)
+        if not np.any(mask):
+            print(f"Skipping {sheet_name} — no alpha_exp in range 0.1–0.5")
+            continue
+
+        HF_exp = HF_exp[mask]
+        HF_model = HF_model[mask]
+
+        # Normalized MSE within that range
         eps = 1e-8
         scale = np.max(np.abs(HF_exp)) + eps
-        mse = np.mean(((HF_exp - HF_model) / scale) ** 2)
-        total_error += mse
+        mse = np.mean(((HF_exp - HF_model) / np.max(np.abs(HF_exp))) ** 2)
+        total_error += mse / len(sheet_names)
 
     print(f"Test params {param_values} -> total error {total_error:.3e}")
     return total_error
