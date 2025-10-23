@@ -9,28 +9,22 @@ from src.processing.data_loadonce import get_dataset
 from src.models.specs import get_modelspec
 
 
-# ================================================================
-# 1️⃣ Load experimental data
-# ================================================================
-all_sheets, sheet_names = get_dataset("iso_DII", reload=True)
+# Load experimental data
+all_sheets, sheet_names = get_dataset("noniso_DII", reload=True)
 
-# ================================================================
-# 2️⃣ Select model and parameters
-# ================================================================
+# Select model and parameters
 model_spec = get_modelspec("DII_3D")
 
 # Choose which parameters to optimize
-param_names = ["N0", "q2_0", "q2_1"]  
+param_names = []
 x0 = [model_spec.params.adaptable_params[name] for name in param_names]
 
 
-# ================================================================
-# 3️⃣ Define objective (error) function
-# ================================================================
+# Define objective (error) function
 def objective_function(param_values):
     """
     Compute total squared error between experimental and model HF curves,
-    but only for alpha_exp in [0.1, 0.5].
+    but only for alpha_exp in a certain range
     """
     for name, value in zip(param_names, param_values):
         model_spec.params.adaptable_params[name] = value
@@ -54,14 +48,14 @@ def objective_function(param_values):
             print(f"Skipping {sheet_name} — no measurable HF signal")
             continue
 
-        N0 = model_spec.params.adaptable_params['N0']
+        N0  = model_spec.params.functions["N0"](model_spec.params)
         y0 = model_spec.make_y0(sheet_name, df)
         y0[0] = N0
 
         try:
             [T_func, sol] = run_model(model_spec.func, y0, t_exp, T_exp, DT_exp, model_spec.params)
         except Exception as e:
-            print(f"⚠️ Model failed on {sheet_name}: {e}")
+            print(f"Model failed on {sheet_name}: {e}")
             return np.inf
 
         state_dict = dict(zip(model_spec.state_names, sol.y))
@@ -75,36 +69,34 @@ def objective_function(param_values):
 
         # Safety checks
         if np.any(np.isnan(HF_model)) or np.any(np.isinf(HF_model)):
-            print(f"⚠️ Invalid HF_model for {sheet_name}")
+            print(f"Invalid HF_model for {sheet_name}")
             return np.inf
 
-        # ✅ Restrict comparison to 0.1 <= alpha_exp <= 0.5
-        mask = (alpha_exp >= 0.1) & (alpha_exp <= 0.5)
+        # Restrict comparison 
+        mask = (alpha_exp >= 0.02) & (alpha_exp <= 0.4)
         if not np.any(mask):
-            print(f"Skipping {sheet_name} — no alpha_exp in range 0.1–0.5")
+            print(f"Skipping {sheet_name} — no alpha_exp in range")
             continue
 
-        HF_exp = HF_exp[mask]
-        HF_model = HF_model[mask]
+        alpha_exp = alpha_exp[mask]
+        alpha_model = state_dict["alpha"][mask]
 
         # Normalized MSE within that range
         eps = 1e-8
-        scale = np.max(np.abs(HF_exp)) + eps
-        mse = np.mean(((HF_exp - HF_model) / np.max(np.abs(HF_exp))) ** 2)
+        scale = (np.max(alpha_exp) - np.min(alpha_exp)) + eps
+        mse = np.mean(((alpha_exp - alpha_model) / scale) ** 2)
         total_error += mse / len(sheet_names)
 
     print(f"Test params {param_values} -> total error {total_error:.3e}")
     return total_error
 
-# ================================================================
-# 4️⃣ Run optimization
-# ================================================================
+# Run optimization
 print("\n=== Starting optimization ===")
 result = minimize(
     objective_function,
     x0,
     method='Nelder-Mead',     # derivative-free, robust for noisy models
-    options={'maxiter': 50, 'disp': True}
+    options={'maxiter': 25, 'disp': True}
 )
 
 print("\n=== Optimization complete ===")
@@ -116,9 +108,7 @@ for name, value in zip(param_names, result.x):
     model_spec.params.adaptable_params[name] = value
 
 
-# ================================================================
-# 5️⃣ Final model run and plotting with optimized parameters
-# ================================================================
+# Final model run and plotting with optimized parameters
 results = []
 
 for sheet_name in sheet_names:
@@ -134,8 +124,7 @@ for sheet_name in sheet_names:
     weight = df['Weight'].values
     deltaH_m = get_deltaHm(df['Int'])
 
-    N0 = model_spec.params.adaptable_params['N0']
-
+    N0  = model_spec.params.functions["N0"](model_spec.params)
     y0 = model_spec.make_y0(sheet_name, df)
     y0[0] = N0
 
@@ -162,7 +151,7 @@ for sheet_name in sheet_names:
         'weight': weight
     })
 
-    print(f"✅ Done processing sheet {sheet_name}")
+    print(f"Done processing sheet {sheet_name}")
 
-print("✅ Done processing all sheets — now plotting.")
+print("Done processing all sheets — now plotting.")
 plot_results(results)

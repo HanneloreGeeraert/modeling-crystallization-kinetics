@@ -1,4 +1,4 @@
-from .kinetics import haudin_chenot_3D, haudin_chenot_3D_twostep
+from .kinetics import haudin_chenot_3D, haudin_chenot_3D_twostep, haudin_chenot_3D_test
 from ..parameters.domainII import DII_3D
 
 class ModelSpec:
@@ -29,9 +29,17 @@ DII_3D_twostep = ModelSpec(
     state_names=["N", "Ni", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]
 )
 
-DII_3D = ModelSpec(
+DII_3D_onestep = ModelSpec(
     dimensions=3,
     func=haudin_chenot_3D,
+    params=DII_3D,
+    n_states=7,
+    state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]
+)
+
+DII_3D_test = ModelSpec(
+    dimensions=3,
+    func=haudin_chenot_3D_test,
     params=DII_3D,
     n_states=7,
     state_names=["N", "alpha", "Na", "Ntilde_a", "F", "P", "Q"]

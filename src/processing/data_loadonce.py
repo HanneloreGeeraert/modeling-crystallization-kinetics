@@ -12,15 +12,27 @@ BASE_FOLDER = r"C:\Users\Hannelore\OneDrive - Vrije Universiteit Brussel\Bestand
 DATASETS = {
     "noniso_DII": {
         "file": "Self-nucleation P(3HB-co 5% 4HB) non-iso C10 (rep 1).xlsx",
-        "sheets": ["Ts176_C10"]  #["Ts164_C10", "Ts168_C10", "Ts172_C10", "Ts176_C10"]
+        "sheets": ["Ts164_C10", "Ts168_C10", "Ts172_C10", "Ts176_C10"]
     },
-    "iso_DII": {
+    "iso_Ts176": {
         "file": "Self-nucleation P(3HB-co-5% 4HB) 176x3 iso with cooling.xlsx",
-        "sheets": ["Ts176_Tiso100", "Ts176_Tiso105", "Ts176_Tiso110", "Ts176_Tiso120"]
+        "sheets": ["Ts176_Tiso100", "Ts176_Tiso105", "Ts176_Tiso110", "Ts176_Tiso115", "Ts176_Tiso120"]
     },
-    "noniso_CR": {
+    "iso_Ts180": {
+        "file": "Self-nucleation P(3HB-co-5% 4HB) 180x3 iso with cooling.xlsx",
+        "sheets": ["Ts180_Tiso105", "Ts180_Tiso115"] 
+    },
+    "noniso_Ts176": {
         "file": "Self-nucleation P(3HB-co 5% 4HB) 176x3 non-iso.xlsx",
         "sheets": ["Ts176_C1", "Ts176_C2", "Ts176_C5", "Ts176_C10", "Ts176_C20", "Ts176_C30", "Ts176_C100"]
+    },
+    "noniso_Ts172": {
+        "file": "Self-nucleation P(3HB-co 5% 4HB) 172x3 non-iso.xlsx",
+        "sheets": ["Ts172_C1", "Ts172_C2", "Ts172_C5", "Ts172_C10", "Ts172_C20", "Ts172_C30", "Ts172_C100"]
+    },
+    "noniso_Ts172-176": {
+        "file": "Self-nucleation P(3HB-co 5% 4HB) 172-176x3 non-iso.xlsx",
+        "sheets": ["Ts172_C2", "Ts172_C5", "Ts172_C10", "Ts172_C30", "Ts176_C2", "Ts176_C5", "Ts176_C10", "Ts176_C30"]
     }
 }
 

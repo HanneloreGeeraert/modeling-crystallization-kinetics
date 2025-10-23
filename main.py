@@ -6,13 +6,15 @@ from src.processing.size_distribution_lessmemory import evolve_spherulites, plot
 from src.processing.data_loadonce import get_dataset
 from src.models.specs import get_modelspec
 
+import matplotlib.pyplot as plt
+
 # Load experimental data
-[all_sheets, sheet_names] = get_dataset("iso_DII", reload = False)
+[all_sheets, sheet_names] = get_dataset("noniso_Ts176", reload = False)
 
 results = []
 
-# Select model and parameters 
-model_spec = get_modelspec("DII_3D")
+# Select model and parameters
+model_spec = get_modelspec("DII_3D_onestep")
 
 for i, sheet_name in enumerate(sheet_names):
     
@@ -29,8 +31,10 @@ for i, sheet_name in enumerate(sheet_names):
     deltaH_m = get_deltaHm(df['Int'])
 
     # Initial conditions for the model
-    N0 = model_spec.params.adaptable_params['N0']
     y0 = model_spec.make_y0(sheet_name, df)
+    N0  = model_spec.params.functions["N0"](model_spec.params)
+
+    #N0 = 3.2e11
     y0[0] = N0
 
     # Run chosen model with parameter set
@@ -52,6 +56,9 @@ for i, sheet_name in enumerate(sheet_names):
 
     # Recompute G(t) on the solver grid (same interpolation you already use)
     G_model  = model_spec.params.functions["G"](T_func(t_exp), model_spec.params)
+    
+    #plt.scatter(t_exp, state_dict["Na"])
+    #plt.show()
 
     # Mean radius (matrix over i>j)
     #histograms = evolve_spherulites(model_spec.dimensions, t_exp, state_dict['alpha'], G_model, state_dict["F"], state_dict["Na"], bins=100, plot=False)

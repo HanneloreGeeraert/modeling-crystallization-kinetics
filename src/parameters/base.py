@@ -13,8 +13,6 @@ class ModelParams:
         self.fixed_params = fixed_params or {}
         self.adaptable_params = adaptable_params or {}
 
-
-# Shared functions for model parameters
 def G_LH(T, params): 
     R = params.fixed_params['R']
     U = params.fixed_params['U']  
@@ -38,54 +36,48 @@ def G_LH(T, params):
     
     return G
 
+# Used in two-step model:
 def q_1(T, params): 
     q1_0 = params.adaptable_params['q1_0']
     q1_1 = params.adaptable_params['q1_1']
-    T0 = params.adaptable_params['T0']
-    return q1_0 * np.exp(-q1_1 * (T - T0))
+    Ts = params.fixed_params['Ts']
+    
+    T0 = 150 + 273.15
+    
+    val = q1_0 * np.exp(-q1_1 * (T - T0))
+    return np.clip(val, 1e-20, 1e20)
 
+# Used in one-step and two-step model:
 def q_2(T, params): 
     q2_0 = params.adaptable_params['q2_0']
     q2_1 = params.adaptable_params['q2_1']
-    T0 = params.adaptable_params['T0']
-    return q2_0 * np.exp(-q2_1 * (T - T0))
 
-def Nmax_exponential(params):
+    T0 = 150 + 273.15
+
+    val = q2_0 * np.exp(-q2_1 * (T - T0))
+    return np.clip(val, 1e-20, 1e20)
+
+def N0_fixed(params):
     Ts = params.fixed_params['Ts']
-    Nmax_a = params.adaptable_params['Nmax_a']
-    Nmax_b = params.adaptable_params['Nmax_b']
 
-    Ts_DIIa = 166 + 273.15
-    if Ts > Ts_DIIa:    
-        log10Nmax = Nmax_b + Ts * Nmax_a
-    else: 
-        log10Nmax = Nmax_b + Ts_DIIa * Nmax_a
-    return 10**log10Nmax
-
-def Nmax_fixed():
-    return 8e10
-
-def N0_logistic(T, params):
-    # Extract from params
-    k_N = params.adaptable_params['k_N']
-    Tsref = params.adaptable_params['Tsref']
-    Nmax = Nmax_fixed()
+    if Ts == 164+273.15:
+        N0 = params.adaptable_params['N0_164']
+    elif Ts == 168+273.15:
+        N0 = params.adaptable_params['N0_168']
+    elif Ts == 172+273.15:
+        N0 = params.adaptable_params['N0_172']
+    elif Ts == 176+273.15:
+        N0 = params.adaptable_params['N0_176']
+    else:
+        N0 = 1
     
-    # Compute N0
-    x = np.clip(k_N * (T - Tsref), -700, 700)
-    return Nmax / (1 + np.exp(x))
-
-def dN0dT_logistic(N0, params):
-    k_N = params.adaptable_params['k_N']
-    Nmax = Nmax_fixed()
-    return -k_N * N0 * (1 - N0 / Nmax)
-
-def N0_fixed(T, params):
-    return 0
+    return N0
 
 def dN0dT_fixed(N0, params):
     return 0
 
+
+# Not used:
 def alpha_max_test(T, params):
     eps = 1e-10
     alpha_max = 1 - eps # Default value
@@ -97,3 +89,16 @@ def alpha_max_test(T, params):
         alpha_max = poly_val = a * T**2 + b * T + c
 
     return 0.8 #np.clip(alpha_max, 0.6, 1-eps)  # Safe lower bound
+
+def N0_logistic(params):
+    # Extract from params
+    Ts = params.fixed_params['Ts']
+    Tsref = params.adaptable_params['Tsref']
+    Nmax = params.adaptable_params['Nmax']
+    k = params.adaptable_params['k']
+
+    # Compute N0
+    log_N0 = np.log(Nmax) / (1 + np.exp(-k * (Ts - Tsref)))
+    N0 = np.exp(log_N0)
+
+    return np.clip(N0, 0, Nmax)

@@ -1,6 +1,6 @@
 import numpy as np
 from .base import ModelParams
-from .base import G_LH, q_1, q_2, N0_logistic, dN0dT_logistic, alpha_max_test, N0_fixed, dN0dT_fixed
+from .base import G_LH, q_1, q_2, N0_fixed, N0_logistic, dN0dT_fixed
 
 # Parameters that will be used:
 # Fixed parameters (never optimized)
@@ -11,16 +11,21 @@ fixed_params = dict(
 )
 
 adaptable_DII_3D = dict(
-    T_infty=267.85-30,
+    T_infty=237.85,
     Tm0=454.65,
-    G0=28.05607404,
-    Kg=327350.6189,
-    q1_0=4e-6,
-    q1_1=1.42e-1,
-    q2_0=4.66e-4,
-    q2_1=9.20e-2,
-    T0=150+273.15,
-    N0=5e+10
+    G0=104.605607404,
+    Kg=369500,
+    #q10_0=0.747e-7,
+    #q1_1=0.29593,
+    q2_0=8.58537e-4,
+    q2_1=0.08102793,
+    #N0_164=202635789141506.56,
+    #N0_168=83572747116894.94,
+    N0_172=1.0228e13,
+    N0_176=1.0302e12,
+    #Tsref=456,
+    #Nmax=3e+14,
+    #k= -2.1e-01
 )
 
 DII_3D = ModelParams(
