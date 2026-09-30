@@ -2,6 +2,7 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import math
 
 def parse_sheetname(sheetnames):
     def extract(sheet):
@@ -37,7 +38,7 @@ def parse_sheetname(sheetnames):
     key_to_title = {
         "Ts": (r"$T_{\mathrm{s}}$ (°C)", "°C"),
         "Tiso": (r"$T_{\mathrm{iso}}$ (°C)", "°C"),
-        "C": ("Cooling rate (°C/min)", "°C/min"),
+        "C": ("Cooling rate", "°C/min"),
     }
 
     # Build labels
@@ -57,12 +58,12 @@ def parse_sheetname(sheetnames):
 
     return varying_keys, labels, title, mode
 
-def plot_results(results):
+def plot_results(results, xlim=None, xmin=None, xmax=None):
     n_sheets = len(results)
     cmap = plt.get_cmap("viridis")  
     colors = cmap(np.linspace(0, 1, n_sheets))
     
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 6), sharex=True)
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6, 6), sharex=True)
     ax1, ax2 = axes
 
     # Legend helpers
@@ -75,6 +76,7 @@ def plot_results(results):
     varying_keys, labels, title, mode = parse_sheetname(sheetnames)
 
     temp_legend = {}
+    align_legend = 'right'
 
     for i, r in enumerate(results):
         color = colors[i]
@@ -102,31 +104,46 @@ def plot_results(results):
         if label_val not in temp_legend:
             temp_legend[label_val] = Line2D([0], [0], color=color, label=label_val)
 
+    # Formatting Crystallinity
+    if mode == 'iso':
+        ax2.set_xlabel("Time (s) (measured from the start of cooling)")
+        ax2.set_xscale('log')
+
+        if xlim == None:
+            xlim = 10000
+        ax2.set_xlim(100,xlim)
+        align_legend = 'right'
+        
+
+    elif mode == 'noniso':
+        ax2.set_xlabel('Temperature (°C)')
+        if xmin == None:
+            xmin = 20
+        if xmax == None: 
+            xmax = 140
+        ax2.set_xlim(xmin,xmax)
+        
+        align_legend = 'left'
+
     # Formatting Heat Flow
-    ax1.set_ylabel('Heat Flow (W/g)')
-    legend1 = ax1.legend(handles=style_legend, loc="lower right", frameon=False)
+    ax1.set_ylabel('Heat flow (W/g)')
+    legend1 = ax1.legend(handles=style_legend, loc="lower " + align_legend, frameon=False, alignment = align_legend)
     ax1.add_artist(legend1)
     if title is not None:  # only add if varying parameter found
-        legend2 = ax1.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
+        legend2 = ax1.legend(handles=temp_legend.values(), title=title, loc="center " + align_legend, frameon=False, alignment = align_legend)
         ax1.add_artist(legend2)
     ax1.grid(False)
 
-    # Formatting Crystallinity
-    if mode == 'iso':
-        ax2.set_xlabel('Step time (s)')
-        ax2.set_xlim(0,3600)
-    if mode == 'noniso':
-        ax2.set_xlabel('Temperature (°C)')
-        ax2.set_xlim(50, 150)
-    ax2.set_ylabel('Crystallinity (-)')
-    legend1 = ax2.legend(handles=style_legend, loc="lower right", frameon=False)
+    ax2.set_ylabel("α (-)")
+    legend1 = ax2.legend(handles=style_legend, loc="lower " + align_legend, frameon=False, alignment = align_legend)
     ax2.add_artist(legend1)
     if title is not None:
-        legend2 = ax2.legend(handles=temp_legend.values(), title=title, loc="center right", frameon=False)
+        legend2 = ax2.legend(handles=temp_legend.values(), title=title, loc="center " + align_legend, frameon=False, alignment = align_legend)
         ax2.add_artist(legend2)
     ax2.grid(False)
 
     plt.tight_layout()
+    plt.savefig("Modeling results.png", dpi=600)
     plt.show()
 
     return fig, axes

@@ -54,7 +54,7 @@ def evolve_spherulites(dimensions, t, alpha, G, F, Na):
 
 def plot_spherulites(dimensions, results, i=-1, bins=100):
     n_results = len(results)
-    colors = plt.cm.viridis(np.linspace(0, 1, n_results))  # automatic colors
+    colors = plt.cm.viridis(np.linspace(0, 1, n_results))  # pyright: ignore[reportAttributeAccessIssue] # automatic colors
 
     sheetnames = [r['sheet'] for r in results]
     varying_keys, labels, title, mode = parse_sheetname(sheetnames)
@@ -81,7 +81,7 @@ def plot_spherulites(dimensions, results, i=-1, bins=100):
         counts = dn_kl[i, :]
 
         # histogram weighted by counts
-        hist, edges = np.histogram(radii, bins=bins, weights=counts)
+        hist, edges = np.histogram(radii, bins=bins, weights=counts) # pyright: ignore[reportPossiblyUnboundVariable]
 
         # plot
         centers = 0.5 * (edges[1:] + edges[:-1]) * 1e6  # in µm

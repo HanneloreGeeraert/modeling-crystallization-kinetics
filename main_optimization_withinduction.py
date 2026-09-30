@@ -4,7 +4,7 @@ import numpy as np
 from scipy.optimize import differential_evolution, minimize
 
 # === Local imports ===
-from src.models.kinetics import run_model
+from src.models.kinetics import run_model, run_model_with_induction
 from src.models.utils import get_deltaHm
 from src.processing.plotting import plot_results
 from src.processing.data_loadonce import get_dataset
@@ -14,19 +14,15 @@ from src.models.specs import get_modelspec
 # === Define parameters and bounds ===
 # -------------------------------------------------------------------------
 
-log_params = ["q2_0", "q2_1"]
-lin_params = ["N0_164", "N0_168", "N0_172", "N0_176"]
+log_params = ["Kg", "G0", "C"]
+lin_params = ["t_ref"]
 param_names = log_params + lin_params
 
 param_bounds = {
-    "q2_0": (1e-7, 1e-3),
-    "q2_1": (1e-2, 1e0),
-    "N0_164": (1e13, 1e15),
-    "N0_168": (6e12, 6e14),
-    "N0_172": (2e12, 2e14),
-    "N0_176": (1e11, 1e13)
-}
-
+    "G0": (10,1000),
+    "Kg": (3.5e5,4.5e5), 
+    "C": (25,75),
+    "t_ref": (1000,20000)}
 
 # -------------------------------------------------------------------------
 # === Helper functions ===
@@ -40,6 +36,15 @@ def safe_exp(x, limit=40.0):
 def run_model_and_compute_loss(model_spec, all_sheets, sheet_names, params):
     """Runs model and returns total normalized MSE loss."""
     total_error = 0.0
+    total_weight = 0.0
+
+    sheet_weights = {
+        "Ts176_C1": 3.0,
+        "Ts176_CR2": 1.0,
+        "Ts176_CR5": 1.0,
+        "Ts176_CR10": 1.0,
+        "Ts176_CR30": 3.0,
+    }
 
     # Assign parameters to model
     for name, value in params.items():
@@ -50,39 +55,38 @@ def run_model_and_compute_loss(model_spec, all_sheets, sheet_names, params):
         model_spec.params.fixed_params["Ts"] = Ts
 
         df = all_sheets[sheet_name]
-        t_exp = df["StepTime_sec"].values
-        T_exp = df["Temperature"].values + 273.15
-        DT_exp = df["DT"].values / 60
-        HF_exp = df["HF_Corrected_x_W"].values
-        alpha_exp = df["alpha_x_weight"].values
-        deltaH_m = get_deltaHm(df["Int"])
+        t_exp = df["StepTime (s)"].values
+        T_exp = df["Temperature (°C)"].values + 273.15
+        DT_exp = df["DT (K/min)"].values / 60
+        HF_exp = df["Heat Flow Baseline Corrected (W/g)"].values
+        alpha_exp = df["Alpha (-)"].values
+        deltaH_m = model_spec.params.functions["deltaH_m"](model_spec.params)
 
         if np.max(np.abs(HF_exp)) < 1e-6:
             continue
 
         N0  = model_spec.params.functions["N0"](model_spec.params)
         y0 = model_spec.make_y0(sheet_name, df)
+        
         y0[0] = N0
+        y0[-1] = model_spec.params.adaptable_params['t_ref']
 
         try:
-            [T_func, sol] = run_model(model_spec.func, y0, t_exp, T_exp, DT_exp, model_spec.params)
+            [T_func, sol] = run_model_with_induction(model_spec.func, y0, t_exp, T_exp, DT_exp, model_spec.params)
+            if not sol.success:
+                print(f"Solver failed for {params}")
+                print(sol.message)
+                return 1e10
+            if not np.all(np.isfinite(sol.y)):
+                print(f"Non-finite solution for {params}")
+                return 1e10
         except Exception as e:
-            print(f"[Invalid params] {params} → {e}")
-            return 1e6 
+            print("Objective failed:", e)
+            raise
 
         state_dict = dict(zip(model_spec.state_names, sol.y))
-        dalpha_dt = np.gradient(state_dict["alpha"], t_exp)
 
-        if "alphas" in state_dict:
-            dalphas_dt = np.gradient(state_dict["alphas"], t_exp)
-            HF_model = deltaH_m * (dalpha_dt + dalphas_dt)
-        else:
-            HF_model = deltaH_m * dalpha_dt
-
-        if np.any(np.isnan(HF_model)) or np.any(np.isinf(HF_model)):
-            return np.inf
-
-        mask = (alpha_exp >= 0.05) & (alpha_exp <= 0.4)
+        mask = (alpha_exp >= 0.05) & (alpha_exp <= 0.5)
         if not np.any(mask):
             continue
 
@@ -90,10 +94,14 @@ def run_model_and_compute_loss(model_spec, all_sheets, sheet_names, params):
         alpha_model = state_dict["alpha"][mask]
 
         eps = 1e-8
-        mse = np.mean(((alpha_exp - alpha_model) / (np.max(np.abs(alpha_exp)) + eps)) ** 2)
-        total_error += mse / len(sheet_names)
+        mse = np.mean((alpha_exp - alpha_model) ** 2)
 
-    return total_error
+        weight = sheet_weights.get(sheet_name, 1.0)
+
+        total_error += weight * mse
+        total_weight += weight
+
+    return total_error/total_weight
 
 
 # -------------------------------------------------------------------------
@@ -124,17 +132,35 @@ def unpack_params(x):
 # === Objective function (mixed-scale) ===
 # -------------------------------------------------------------------------
 
+# Define globals at the top of your script
+best_loss = np.inf
+best_x = None
+
 def objective_function_mixed(x, model_spec, all_sheets, sheet_names):
+    global best_loss, best_x
+
     try:
         params = unpack_params(x)
-        loss = run_model_and_compute_loss(model_spec, all_sheets, sheet_names, params)
+        local_spec = get_modelspec("DII_3D_induction")
+        loss = run_model_and_compute_loss(local_spec, all_sheets, sheet_names, params)
         print(f"Test params {params} -> total error {loss:.3e}")
 
+        # Handle NaN or inf
         if not np.isfinite(loss):
             return 1e10
+
+        # Track best-so-far
+        if loss < best_loss:
+            best_loss = loss
+            best_x = x.copy()
+            print("🔥 New best:", best_loss, best_x)
+
         return loss
-    except Exception:
-        return 1e10
+
+    except Exception as e:
+        print("⚠️ Model crashed for params:", x)
+        print("Error:", e)
+        return 1e9
 
 
 # -------------------------------------------------------------------------
@@ -143,8 +169,8 @@ def objective_function_mixed(x, model_spec, all_sheets, sheet_names):
 
 def main():
     print("Loading dataset from Excel...")
-    all_sheets, sheet_names = get_dataset("noniso_DII", reload=True)
-    model_spec = get_modelspec("DII_3D")
+    all_sheets, sheet_names = get_dataset("noniso_Ts176", reload=True)
+    model_spec = get_modelspec("DII_3D_induction")
 
     # ------------------ GLOBAL OPTIMIZATION ------------------
     print("\n=== Global optimization (Differential Evolution) ===")
@@ -153,12 +179,11 @@ def main():
         func=objective_function_mixed,
         bounds=bounds,
         args=(model_spec, all_sheets, sheet_names),
-        maxiter=20,
-        popsize=8,
+        maxiter=40,
+        popsize=5,
         disp=True,
         polish=False,
-        seed=42,
-    )
+        seed=42)
 
     print("\nGlobal optimization complete.")
     print("Best parameters (raw optimizer values):", result_global.x)
@@ -172,11 +197,10 @@ def main():
         method="L-BFGS-B",
         bounds=bounds,
         options={
-            "maxiter": 2000,   # maximum iterations
-            "maxfun": 4000,    # maximum function evaluations
-            "ftol": 1e-8,      # tolerance for function value convergence
-            "gtol": 1e-8,      # tolerance for gradient norm
-            "verbose": 1       # print convergence messages
+            "maxiter": 20,   # maximum iterations
+            "maxfun": 50,    # maximum function evaluations
+            "ftol": 1e-6,      # tolerance for function value convergence
+            "gtol": 1e-6      # tolerance for gradient norm
         },
     )
     best_params = unpack_params(result_local.x)
@@ -185,6 +209,10 @@ def main():
         print(f"  {name} = {value:.4e}")
 
     # ------------------ Final model run and plot ------------------
+    # Rebuild a clean model spec so no mutated state remains
+    model_spec = get_modelspec("DII_3D_induction")
+
+    # Apply optimized parameters
     for name, value in best_params.items():
         model_spec.params.adaptable_params[name] = value
 
@@ -194,29 +222,26 @@ def main():
         model_spec.params.fixed_params["Ts"] = Ts
 
         df = all_sheets[sheet_name]
-        t_exp = df["StepTime_sec"].values
-        T_exp = df["Temperature"].values + 273.15
-        DT_exp = df["DT"].values / 60
-        HF_exp = df["HF_Corrected_x_W"].values
-        alpha_exp = df["alpha_x_weight"].values
-        weight = df["Weight"].values
-        deltaH_m = get_deltaHm(df["Int"])
+        t_exp = df["StepTime (s)"].values
+        T_exp = df["Temperature (°C)"].values + 273.15
+        DT_exp = df["DT (K/min)"].values / 60
+        HF_exp = df["Heat Flow Baseline Corrected (W/g)"].values
+        alpha_exp = df["Alpha (-)"].values
+        weight = df["Weight (-)"].values
+        deltaH_m = model_spec.params.functions["deltaH_m"](model_spec.params)
+
 
         N0  = model_spec.params.functions["N0"](model_spec.params)
         y0 = model_spec.make_y0(sheet_name, df)
         y0[0] = N0
+        y0[-1] = model_spec.params.adaptable_params['t_ref']    
 
-        [T_func, sol] = run_model(model_spec.func, y0, t_exp, T_exp, DT_exp, model_spec.params)
+        [T_func, sol] = run_model_with_induction(model_spec.func, y0, t_exp, T_exp, DT_exp, model_spec.params)
         state_dict = dict(zip(model_spec.state_names, sol.y))
         dalpha_dt = np.gradient(state_dict["alpha"], t_exp)
 
-        if "alphas" in state_dict:
-            dalphas_dt = np.gradient(state_dict["alphas"], t_exp)
-            HF_model = deltaH_m * (dalpha_dt + dalphas_dt)
-            alpha_model = state_dict["alpha"] + state_dict["alphas"]
-        else:
-            HF_model = deltaH_m * dalpha_dt
-            alpha_model = state_dict["alpha"]
+        HF_model = deltaH_m * dalpha_dt
+        alpha_model = state_dict["alpha"]
 
         results.append({
             "sheet": sheet_name,

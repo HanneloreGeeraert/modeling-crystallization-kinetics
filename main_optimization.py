@@ -10,13 +10,13 @@ from src.models.specs import get_modelspec
 
 
 # Load experimental data
-all_sheets, sheet_names = get_dataset("noniso_DII", reload=True)
+all_sheets, sheet_names = get_dataset("iso_Ts176", reload=True)
 
 # Select model and parameters
-model_spec = get_modelspec("DII_3D")
+model_spec = get_modelspec("DII_3D_onestep")
 
 # Choose which parameters to optimize
-param_names = []
+param_names = ['U']
 x0 = [model_spec.params.adaptable_params[name] for name in param_names]
 
 
@@ -36,12 +36,13 @@ def objective_function(param_values):
         model_spec.params.fixed_params['Ts'] = Ts
 
         df = all_sheets[sheet_name]
-        t_exp = df['StepTime_sec'].values
-        T_exp = df['Temperature'].values + 273.15
-        DT_exp = df['DT'].values / 60
-        HF_exp = df['HF_Corrected_x_W'].values
-        alpha_exp = df['alpha_x_weight'].values
-        deltaH_m = get_deltaHm(df['Int'])
+        t_exp = df['StepTime (s)'].values
+        T_exp = df['Temperature (°C)'].values + 273.15
+        DT_exp = df['DT (K/min)'].values / 60
+        HF_exp = df['Heat Flow Baseline Corrected (W/g)'].values
+        alpha_exp = df['Alpha (-)'].values
+        weight = df['Weight (-)'].values
+        deltaH_m = get_deltaHm(df['Int (J/g)'].values)
 
         # Skip empty signals
         if np.max(np.abs(HF_exp)) < 1e-6:
@@ -116,13 +117,13 @@ for sheet_name in sheet_names:
     model_spec.params.fixed_params['Ts'] = Ts
 
     df = all_sheets[sheet_name]
-    t_exp = df['StepTime_sec'].values
-    T_exp = df['Temperature'].values + 273.15
-    DT_exp = df['DT'].values / 60
-    HF_exp = df['HF_Corrected_x_W'].values
-    alpha_exp = df['alpha_x_weight'].values
-    weight = df['Weight'].values
-    deltaH_m = get_deltaHm(df['Int'])
+    t_exp = df['StepTime (s)'].values
+    T_exp = df['Temperature (°C)'].values + 273.15
+    DT_exp = df['DT (K/min)'].values / 60
+    HF_exp = df['Heat Flow Baseline Corrected (W/g)'].values
+    alpha_exp = df['Alpha (-)'].values
+    weight = df['Weight (-)'].values
+    deltaH_m = get_deltaHm(df['Int (J/g)'].values)
 
     N0  = model_spec.params.functions["N0"](model_spec.params)
     y0 = model_spec.make_y0(sheet_name, df)
